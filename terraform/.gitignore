@@ -1,0 +1,14 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+EOF
