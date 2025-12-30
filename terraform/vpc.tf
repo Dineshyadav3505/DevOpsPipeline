@@ -1,3 +1,26 @@
+# Generate RSA private key for Jenkins
+resource "tls_private_key" "jenkins_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create AWS EC2 key pair
+resource "aws_key_pair" "terraform_jenkins_key" {
+  key_name   = "terraform-jenkins-key"
+  public_key = tls_private_key.jenkins_key.public_key_openssh
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Save private key locally (chmod 400 after apply)
+resource "local_file" "jenkins_private_key" {
+  content         = tls_private_key.jenkins_key.private_key_pem
+  filename        = "terraform-jenkins-key.pem"
+  file_permission = "0400"
+}
+
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -32,7 +55,7 @@ resource "aws_security_group" "jenkins_public_instance_sg" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Allow ping from public and private instances within VPC
@@ -76,18 +99,19 @@ resource "aws_security_group" "jenkins_public_instance_sg" {
 resource "aws_instance" "jenkins_public_instance" {
 
   for_each = {
-    "jenkins_master_1" = "t2.micro"
-    "jenkins_master_2" = "t2.micro"
+    "jenkins_master_1" = "t2.medium"
   }
 
   ami                         = "ami-02b8269d5e85954ef"
   instance_type               = each.value
   subnet_id                   = module.vpc.public_subnets[0]
+  key_name                    = "terraform-jenkins-key"
+  monitoring                  = true
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.jenkins_public_instance_sg.id]
 
-  # user_data = file("${path.module}/script/jenkins_master_setup.sh")
-  user_data = templatefile("${path.module}/script/jenkins_master_setup.sh", {})
+  user_data                   = file("script/jenkins_master_setup.sh")
+  user_data_replace_on_change = true
 
   root_block_device {
     volume_size           = var.environment == "prod" ? 50 : var.instance_size
@@ -145,14 +169,16 @@ resource "aws_instance" "jenkins_private_instance" {
 
   for_each = {
     "jenkins_worker_node_1" = "t2.micro"
-    "jenkins_worker_node_2" = "t2.micro"
   }
 
-  ami                         = "ami-02b8269d5e85954ef"
-  instance_type               = each.value
-  subnet_id                   = module.vpc.private_subnets[0]
-  associate_public_ip_address = true
-  vpc_security_group_ids      = [aws_security_group.jenkins_private_instance_sg.id]
+  key_name               = "terraform-jenkins-key"
+  ami                    = "ami-02b8269d5e85954ef"
+  instance_type          = each.value
+  subnet_id              = module.vpc.private_subnets[0]
+  vpc_security_group_ids = [aws_security_group.jenkins_private_instance_sg.id]
+
+  user_data                   = file("script/jenkins_worker_setup.sh")
+  user_data_replace_on_change = true
 
   root_block_device {
     volume_size           = var.environment == "prod" ? 30 : var.instance_size
@@ -161,9 +187,6 @@ resource "aws_instance" "jenkins_private_instance" {
     encrypted             = true # Enable encryption
   }
 
-  # user_data = file("${path.module}/script/jenkins_worker_node_setup.sh")
-  user_data = templatefile("${path.module}/script/jenkins_worker_setup.sh", {})
-
   tags = {
     Name        = each.key
     Terraform   = "true"
@@ -171,5 +194,3 @@ resource "aws_instance" "jenkins_private_instance" {
     Purpose     = "jenkins-pipeline"
   }
 }
-
-

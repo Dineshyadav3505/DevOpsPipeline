@@ -49,37 +49,6 @@ variable "region" {
 variable "instance_size" {
   description = "The size of the AWS instance"
   type = number
-  default = 10
+  default = 30
   
 }
-
-variable "bucket_name" {
-  description = "The name of the S3 bucket"
-  type = string
-  default = "jenkins-vpc-s3-bucket"
-}
-
-variable "dynamodb_table_name" {
-  description = "The name of the DynamoDB table"
-  type = string
-  default = "jenkins-vpc-dynamodb-table"
-}
-
-variable "dynamodb_table_hash_key" {
-  description = "The hash key of the DynamoDB table"
-  type = string
-  default = "id"
-}
-
-variable "dynamodb_table_attribute_name" {
-  description = "The attribute name of the DynamoDB table"
-  type = string
-  default = "id"
-}
-
-variable "dynamodb_table_attribute_type" {
-  description = "The attribute type of the DynamoDB table"
-  type = string
-  default = "N"
-}
-

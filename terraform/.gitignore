@@ -4,6 +4,9 @@
 *.tfstate
 *.tfstate.backup
 
+# SSH keys
+*.pem
+
 # macOS
 .DS_Store
 
