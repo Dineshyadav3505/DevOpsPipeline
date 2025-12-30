@@ -19,8 +19,8 @@ sudo snap install trivy
 sudo apt-get update
 sudo apt-get docker.io -y 
 sudo apt-get install docker-compose -y
-sudo usermod -aG docker $USER
-sudo reboot
+sudo usermod -aG docker $USER && newgrp docker
+
 
 # Install SonarQube using Docker
 docker run -d -p 9000:9000 --name sonarqube-server sonarqube:lts-community
